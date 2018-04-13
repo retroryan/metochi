@@ -8,14 +8,11 @@ import org.slf4j.LoggerFactory;
 import java.util.UUID;
 
 
-/*
-
-io.grpc.StatusRuntimeException: UNAVAILABLE: HTTP/2 error code: NO_ERROR
-Received Goaway
-
-io.grpc.StatusRuntimeException: UNAVAILABLE
-
-
+/**
+ * This encapsulates a connection to another node or peer in the decentralized cluster.
+ *
+ * It sets up the gRPC client connection to the node and manages the communication.
+ *
  */
 public class BroadcastPeer {
 

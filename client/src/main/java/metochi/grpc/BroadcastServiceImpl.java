@@ -17,6 +17,10 @@ public class BroadcastServiceImpl  {
         this.optAuthorityNode = optAuthorityNode;
     }
 
+
+    //TODO - Override the broadcast, queryLatest and queryAll methods here
+
+
     /**
 
      //TODO - Uncomment to enable the Proof of Authority blockchain

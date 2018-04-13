@@ -35,12 +35,6 @@ class PeersManager {
         BroadcastPeer newPeer = new BroadcastPeer(peerURL);
         broadcastPeers.add(newPeer);
         logger.info("added peer: " + peerURL);
-
-/*
-        logger.info("getting latest block from: " + peerURL);
-        Block latestBlock = newPeer.queryLatest();
-        BasicChain.getInstance().addLatestBlock(latestBlock);
-*/
     }
 
     void broadcastLatestBlock(Block latestBlock) {
@@ -59,7 +53,7 @@ class PeersManager {
     void broadcastMessage(Transaction transaction) {
         for (BroadcastPeer peer : broadcastPeers) {
             logger.info("sending message to:" + peer.getPeerURL());
-            //peer.broadcastTransaction(transaction);
+            peer.broadcastTransaction(transaction);
         }
     }
 
@@ -70,9 +64,6 @@ class PeersManager {
 
         for (BroadcastPeer peer : broadcastPeers) {
             logger.info("proposing to:" + peer.getPeerURL());
-
-            /*
-
             ProposeResponse proposeResponse = peer.propose(nodeName);
             if (!proposeResponse.getAccepted()) {
                 logger.info(peer.getPeerURL() + " declined vote");
@@ -80,8 +71,6 @@ class PeersManager {
             } else {
                 logger.info(peer.getPeerURL() + "  accepted vote");
             }
-
-           */
         }
         return accepted;
     }

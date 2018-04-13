@@ -27,7 +27,6 @@ public class ProofOfAuthorityChain {
         return proofOfAuthorityChain;
     }
 
-
     //  The list of transactions is included in each new block created when this node is elected to be the authority.
     //  The complication arises when the transaction list needs to be reset,
     //  ideally there would be a way to be sure we are not currently adding new transactions that might be lost.
@@ -58,6 +57,7 @@ public class ProofOfAuthorityChain {
 
         Transaction genesis_block = Transaction.newBuilder().setMessage("Genesis Block").setSender(EnvVars.NODE_NAME).build();
 
+        //TODO POA - Add Genesis Block
         return Block.newBuilder()
                 .setIndex(0)
                 .setCreator(EnvVars.NODE_NAME)
@@ -78,6 +78,7 @@ public class ProofOfAuthorityChain {
                     logger.info("added peer index: " + peerLatestBlock.getIndex() + "  to latest block to chain");
                     PeersManager.getInstance().broadcastLatestBlock(peerLatestBlock);
 
+                    //TODO POA - Print out new transactions where added by this block
 /*
                     if (peerLatestBlock.getTxnList().size() > 0) {
                         removeExistingTransactions(peerLatestBlock);
@@ -117,6 +118,7 @@ public class ProofOfAuthorityChain {
         Collection<Transaction> latestTransactions = transactions.values();
         String nextHash = calculateHash(nextIndex, previousBlock.getHash(), now, latestTransactions);
 
+        //TODO POA - Add all of the pending transactions to the new block
         Block block = Block.newBuilder()
                 .setIndex(nextIndex)
                 .setCreator(EnvVars.NODE_NAME)
@@ -126,7 +128,6 @@ public class ProofOfAuthorityChain {
                 //.addAllTxn(latestTransactions)
                 .build();
 
-        //logger.info("adding block to: " + blockchain);
         blockchain.add(block);
         logger.info("block added: " + block);
 
@@ -147,6 +148,7 @@ public class ProofOfAuthorityChain {
     }
 
     static String calculateHashForBlock(Block block) {
+        //TODO POA - Calculate the hash for the block
         //return calculateHash(block.getIndex(), block.getPreviousHash(), block.getTimestamp(), block.getTxnList());
 
         return "";
@@ -260,6 +262,10 @@ public class ProofOfAuthorityChain {
 
     private void outputBlockTransactions(Block nextBlock) {
         System.out.println("New Messages from block: " + nextBlock.getIndex());
+
+        //TODO POA - Output the transactions from the given block
+
+        //for simplicity just do a system println, which will show up in the command window
 /*
         nextBlock.getTxnList().forEach(transaction -> {
             if (!transaction.getSender().equals(nodeName))
@@ -275,6 +281,8 @@ public class ProofOfAuthorityChain {
     }
 
     private void removeExistingTransactions(Block peerLatestBlock) {
+
+        //TODO POA - Remove existing transactions from the given block.  That is transactions we already have seen.
 /*
         logger.info("removing transactions received in latest block ");
         peerLatestBlock.getTxnList().forEach(transaction -> {
@@ -283,12 +291,12 @@ public class ProofOfAuthorityChain {
 */
     }
 
-    private AtomicInteger dumpCnt = new AtomicInteger();
+    private AtomicInteger saveCnt = new AtomicInteger();
 
-    public void dumpBlockchain(String nodeName) {
+    public String saveBlockchain(String nodeName) {
+        String blockchainFileName = nodeName + saveCnt.getAndIncrement() + ".blocks";
         try {
-            String dumpName = nodeName + dumpCnt.getAndIncrement() + ".blocks";
-            PrintWriter writer = new PrintWriter(dumpName, "UTF-8");
+            PrintWriter writer = new PrintWriter(blockchainFileName, "UTF-8");
             for (Block block : blockchain) {
                 writer.println(block.toString());
             }
@@ -296,5 +304,6 @@ public class ProofOfAuthorityChain {
         } catch (IOException io) {
             io.printStackTrace();
         }
+        return blockchainFileName;
     }
 }

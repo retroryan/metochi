@@ -167,7 +167,7 @@ public class BasicChain implements BlockChainManager {
                 .setHash(nextHash)
                 .setPreviousHash(previousBlock.getHash())
                 .setTimestamp(now)
-                //.setTxn(nextTransaction)
+                .setTxn(nextTransaction)
                 .build();
 
         //logger.info("adding block to: " + blockchain);

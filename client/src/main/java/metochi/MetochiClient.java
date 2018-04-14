@@ -77,7 +77,7 @@ public class MetochiClient {
             optionalAuthorityNode = Optional.of(authorityNode);
         }
 */
-        client.initServer(optionalAuthorityNode);
+        client.initServer(blockChainManager, optionalAuthorityNode);
 
         // TODO - uncomment init peers to connect this node to other nodes in the network
         //client.initPeers(config.leadNode);
@@ -118,7 +118,7 @@ public class MetochiClient {
      *
      * @throws IOException
      */
-    private void initServer(Optional<AuthorityNode> optionalAuthorityNode) throws IOException {
+    private void initServer(BlockChainManager blockChainManager, Optional<AuthorityNode> optionalAuthorityNode) throws IOException {
 
         // TODO Use ServerBuilder to create a new Server instance. Start it, and await termination.
     }

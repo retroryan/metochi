@@ -80,7 +80,7 @@ public class MetochiClient {
         client.initServer(blockChainManager, optionalAuthorityNode);
 
         // TODO - uncomment init peers to connect this node to other nodes in the network
-        //client.initPeers(config.leadNode);
+        client.initPeers(config.leadNode);
 
         if (config.enableRandomMessage) {
             RandomMessageGenerator randomMessageGenerator = new RandomMessageGenerator(blockChainManager, peersManager);

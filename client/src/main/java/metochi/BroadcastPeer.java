@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /**
  * This encapsulates a connection to another node or peer in the decentralized cluster.
- *
+ * <p>
  * It sets up the gRPC client connection to the node and manages the communication.
  */
 public class BroadcastPeer {
@@ -33,34 +33,42 @@ public class BroadcastPeer {
      * Initialize a managed channel to connect to the broadcast service.
      * Set the broadcastChannel and broadcastService
      */
-     void initBroadcastService(String peerURL) {
+    void initBroadcastService(String peerURL) {
 
         //TODO Initialize the Broadcast Channel and Broadcast Service here
+        ManagedChannel broadcastChannel = ManagedChannelBuilder.forTarget(peerURL)
+                .usePlaintext(true).build();
 
         //TODO Get a new Blocking Stub
+        broadcastService = BroadcastServiceGrpc.newBlockingStub(broadcastChannel);
 
     }
 
-     void broadcast(Block block, String senderURL) {
+    void broadcast(Block block, String senderURL) {
         //TODO Broadcast a block here
+        broadcastService.broadcast(BroadcastMessage
+                .newBuilder()
+                .setBlock(block)
+                .setSender(senderURL)
+                .build());
     }
 
-     String getPeerURL() {
+    String getPeerURL() {
         return peerURL;
     }
 
     public Block queryLatest() {
-      //TODO  Query for the latest blocks here
-        return null;
+        //TODO  Query for the latest blocks here
+        return broadcastService.queryLatest(Empty.newBuilder().build());
     }
 
-     Blockchain queryAll() {
+    Blockchain queryAll() {
         //TODO  Query for the entire blockchain here
-        return null;
+        return broadcastService.queryAll(Empty.newBuilder().build());
     }
 
 
-     ProposeResponse propose(String nodeName) {
+    ProposeResponse propose(String nodeName) {
         return broadcastService.propose(ProposeRequest.newBuilder().setNodeName(nodeName).build());
     }
 

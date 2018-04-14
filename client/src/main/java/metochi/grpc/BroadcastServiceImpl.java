@@ -23,7 +23,7 @@ public class BroadcastServiceImpl {
     //TODO - Override the broadcast, queryLatest and queryAll methods here
 
     //These methods are used when creating a Proof of Authority blockchain
-    @Override
+    //@Override
     public void propose(metochi.ProposeRequest request,
                         io.grpc.stub.StreamObserver<metochi.ProposeResponse> responseObserver) {
 
@@ -49,7 +49,7 @@ public class BroadcastServiceImpl {
         responseObserver.onCompleted();
     }
 
-    @Override
+    //@Override
     public void broadcastTransaction(metochi.Transaction request,
                                      io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
 

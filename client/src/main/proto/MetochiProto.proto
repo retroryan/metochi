@@ -46,8 +46,9 @@ message Blockchain {
     repeated Block chain = 10;
 }
 
-message BroadcastResponse {
-    string response = 10;
+message BroadcastMessage {
+    Block block = 10;
+    string sender = 20;
 }
 
 //This message is used during Proof of Authority to propose an authority round
@@ -62,7 +63,10 @@ message ProposeResponse {
 
 // 3. Review the service definitions
 service BroadcastService {
-  rpc Broadcast (Block) returns (BroadcastResponse);
+
+  rpc InitializeGenesisBlock(Block) returns (google.protobuf.Empty);
+
+  rpc Broadcast (BroadcastMessage) returns (google.protobuf.Empty);
   rpc QueryLatest(google.protobuf.Empty) returns (Block);
   rpc QueryAll(google.protobuf.Empty) returns (Blockchain);
 

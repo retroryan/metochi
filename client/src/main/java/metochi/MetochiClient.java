@@ -37,13 +37,19 @@ public class MetochiClient {
     private static Logger logger = LoggerFactory.getLogger(MetochiClient.class.getName());
     private final ConsoleReader console = new ConsoleReader();
     private final String nodeName;
+    private final String nodeURL;
 
     private Config config;
 
+    private final BlockChainManager blockChainManager;
+    private final PeersManager peersManager;
 
-    public MetochiClient(String nodeName, Config config) throws IOException {
+    public MetochiClient(BlockChainManager blockChainManager, String nodeName, String nodeURL, Config config, PeersManager peersManager) throws IOException {
+        this.blockChainManager = blockChainManager;
         this.nodeName = nodeName;
+        this.nodeURL = nodeURL;
         this.config = config;
+        this.peersManager = peersManager;
     }
 
     public static void main(String[] args) throws Exception {
@@ -52,46 +58,76 @@ public class MetochiClient {
         Config config = Config.loadProperties(nodeName);
         logger.info("starting with config: " + config);
 
-        MetochiClient client = new MetochiClient(nodeName, config);
+        //This manages the list of peer nodes that this node connects to
+        PeersManager peersManager = new PeersManager();
 
-        Optional<AuthorityNode> optAuthorityNode = Optional.empty();
-/*
-        if (config.isAuthorityNode) {
-            AuthorityNode authorityNode = new AuthorityNode(nodeName);
+        String nodeURL = config.hostname + ":" + config.port;
+        logger.info("metochi node is starting on url: " + nodeURL);
+
+        BlockChainManager blockChainManager = initBlockchainManager(nodeName, config, peersManager, nodeURL);
+
+        MetochiClient client = new MetochiClient(blockChainManager, nodeName, nodeURL, config, peersManager);
+
+
+        Optional<AuthorityNode> optionalAuthorityNode = Optional.empty();
+        
+/*      if (config.isAuthorityNode) {
+            AuthorityNode authorityNode = new AuthorityNode(nodeName, blockChainManager, peersManager);
             authorityNode.start();
-            optAuthorityNode = Optional.of(authorityNode);
+            optionalAuthorityNode = Optional.of(authorityNode);
         }
 */
-
-        client.initServer(optAuthorityNode);
+        client.initServer(optionalAuthorityNode);
 
         // TODO - uncomment init peers to connect this node to other nodes in the network
-        // client.initPeers();
+        //client.initPeers(config.leadNode);
 
         if (config.enableRandomMessage) {
-            RandomMessageGenerator.startGenerator(nodeName);
+            RandomMessageGenerator randomMessageGenerator = new RandomMessageGenerator(blockChainManager, peersManager);
+            randomMessageGenerator.startGenerator(nodeName);
         }
         client.prompt();
+    }
 
+    /**
+     *  The Blockchain Manager used will start as a basic chain for the first part of the exercises.
+     *  When the exercises change to use Proof of Authority this needs to be changed to use ProofOfAuthorityChain
+     *
+     * @param nodeName
+     * @param config
+     * @param peersManager
+     * @param nodeURL
+     * @return
+     */
+    private static BlockChainManager initBlockchainManager(String nodeName, Config config, PeersManager peersManager, String nodeURL) {
+
+        BlockChainManager blockChainManager = new BasicChain(peersManager, nodeName, nodeURL);
+
+        // TODO POA - switch to using the ProofOfAuthorityChain
+        // BlockChainManager blockChainManager = new ProofOfAuthorityChain(peersManager, nodeName, nodeURL);
+
+        if (config.leadNode) {
+            logger.info("lead node - creating genesis");
+            blockChainManager.createGenesisBlock();
+        }
+        return blockChainManager;
     }
 
     /**
      * Start the server for this node.  This is in the client class because each node is a client and a server.
      *
-     * @param optAuthorityNode
      * @throws IOException
      */
-    private void initServer(Optional<AuthorityNode> optAuthorityNode) throws IOException {
+    private void initServer(Optional<AuthorityNode> optionalAuthorityNode) throws IOException {
 
         // TODO Use ServerBuilder to create a new Server instance. Start it, and await termination.
-
     }
 
     /**
      * Initialize the connection to the peer nodes after a delayed period.
      * The delay allows time for the peers to start before trying to connect.
      */
-    private void initPeers() {
+    private void initPeers(boolean leadNode) {
         //wait for configured time for peers to start before trying to connect
         try {
             logger.info("sleeping for " + config.startDelay + " seconds to wait for peers to start");
@@ -100,8 +136,15 @@ public class MetochiClient {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         for (String peerURL : config.peerUrls) {
-            addBroadcastPeer(peerURL);
+            peersManager.addBroadcastPeer(peerURL);
+        }
+
+        if (leadNode) {
+            logger.info("lead node - broadcasting genesis");
+            Block genesisBlock = blockChainManager.getBlockchain().getChain(0);
+            peersManager.broadcastBlock(genesisBlock, nodeURL);
         }
     }
 
@@ -132,6 +175,7 @@ public class MetochiClient {
         } else if (!line.isEmpty()) {
             //in the first phase just send this message locally
             //later during Proof of Authority change this to broadcast the message
+            // TODO POA - switch to using broadcastMsg
             sendMsg(line);
         }
     }
@@ -146,17 +190,14 @@ public class MetochiClient {
         String command = splitLine[0];
         if (splitLine.length >= 2) {
             String data = splitLine[1];
-            if (command.equalsIgnoreCase("/addpeer") || command.equalsIgnoreCase("/a")) {
-                logger.info("adding peer");
-                addBroadcastPeer(data);
-            }
+            //process any commands that require data
         } else {
             if (command.equalsIgnoreCase("/blocks") || command.equalsIgnoreCase("/b")) {
                 logger.info("getting blocks");
                 String blockchainFileName = saveBlockchain(nodeName);
                 System.out.println("blockchain written to file: " + blockchainFileName);
             } else if (command.equalsIgnoreCase("/getpeers") || command.equalsIgnoreCase("/g")) {
-                PeersManager.getInstance().getAllPeers();
+                peersManager.getAllPeers();
             } else if (command.equalsIgnoreCase("/quit") || command.equalsIgnoreCase("/q") || command.equalsIgnoreCase("q")) {
                 shutdown();
             }
@@ -171,13 +212,13 @@ public class MetochiClient {
      * @param data
      */
     private void sendMsg(String data) {
-        Block block = BasicChain.getInstance().generateNextBlock(data);
+        Block block = blockChainManager.generateNextBlock(data);
         System.out.println("Generated block: " + block);
     }
 
     /**
      * After the proof of authority rounds and transactions are added to the sample, then this method is used to send messages.
-     *
+     * <p>
      * Send a message by adding it to the list of this nodes transactions and broadcasting it to other peers in the network.
      *
      * @param data
@@ -188,16 +229,13 @@ public class MetochiClient {
                 .setUuid(uuid.toString())
                 .setMessage(data)
                 .setSender(nodeName).build();
-        ProofOfAuthorityChain.getInstance().addTransaction(transaction);
-        PeersManager.getInstance().broadcastMessage(transaction);
+        blockChainManager.addTransaction(transaction);
+        peersManager.broadcastMessage(transaction);
     }
 
-    private void addBroadcastPeer(String peerURL) {
-        PeersManager.getInstance().addBroadcastPeer(peerURL);
-    }
 
     private String saveBlockchain(String nodeName) {
-        return BasicChain.getInstance().saveBlockchain(nodeName);
+        return blockChainManager.saveBlockchain(nodeName);
     }
 
     private void shutdown() {

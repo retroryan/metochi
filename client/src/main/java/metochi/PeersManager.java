@@ -3,44 +3,44 @@ package metochi;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
-class PeersManager {
+/**
+ *
+ * This manages a group of connections to peer nodes.
+ * It stores a list of peers and sends them messages.
+ *
+ */
+public class PeersManager {
 
     private static org.slf4j.Logger logger = LoggerFactory.getLogger(PeersManager.class.getName());
 
     private ArrayList<BroadcastPeer> broadcastPeers = new ArrayList<>();
 
-    private static PeersManager peersManager;
-
-    static PeersManager getInstance() {
-        if (peersManager == null) {
-            peersManager = new PeersManager();
-        }
-        return peersManager;
-    }
-
-    private PeersManager() {
-    }
-
-    void queryAll() {
-        logger.info("We have to query the chain from our peer");
+    void queryAll(Consumer<List<Block>> chainConsumer, String nodeURL) {
+        logger.info("Querying the chain from peer: " + nodeURL);
         for (BroadcastPeer peer : broadcastPeers) {
-            logger.info("getting chain from:" + peer.getPeerURL());
-            Blockchain blockchain = peer.queryAll();
-            BasicChain.getInstance().replaceChain(blockchain.getChainList());
+            if (peer.getPeerURL().equals(nodeURL)) {
+                Blockchain blockchain = peer.queryAll();
+                List<Block> chainList = blockchain.getChainList();
+                chainConsumer.accept(chainList);
+            }
         }
     }
 
-    void addBroadcastPeer(String peerURL) {
+    BroadcastPeer addBroadcastPeer(String peerURL) {
         BroadcastPeer newPeer = new BroadcastPeer(peerURL);
         broadcastPeers.add(newPeer);
         logger.info("added peer: " + peerURL);
+        return newPeer;
     }
 
-    void broadcastLatestBlock(Block latestBlock) {
+    void broadcastBlock(Block latestBlock, String senderURL) {
         for (BroadcastPeer peer : broadcastPeers) {
             logger.info("Sending latest block to:" + peer.getPeerURL());
-            peer.broadcast(latestBlock);
+            peer.broadcast(latestBlock, senderURL);
         }
     }
 

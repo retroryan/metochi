@@ -7,24 +7,22 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 
 // TODO Extend gRPC's BroadcastServiceImplBase
-public class BroadcastServiceImpl  {
+public class BroadcastServiceImpl {
 
     private static org.slf4j.Logger logger = LoggerFactory.getLogger(MetochiClient.class.getName());
 
-    private final Optional<AuthorityNode> optAuthorityNode;
+    private Optional<AuthorityNode> optAuthorityNode;
 
-    public BroadcastServiceImpl(Optional<AuthorityNode> optAuthorityNode) {
+    private final BlockChainManager blockChainManager;
+
+    public BroadcastServiceImpl(BlockChainManager manager, Optional<AuthorityNode> optAuthorityNode) {
+        this.blockChainManager = manager;
         this.optAuthorityNode = optAuthorityNode;
     }
 
-
     //TODO - Override the broadcast, queryLatest and queryAll methods here
 
-
-    /**
-
-     //TODO - Uncomment to enable the Proof of Authority blockchain
-
+    //These methods are used when creating a Proof of Authority blockchain
     @Override
     public void propose(metochi.ProposeRequest request,
                         io.grpc.stub.StreamObserver<metochi.ProposeResponse> responseObserver) {
@@ -55,12 +53,9 @@ public class BroadcastServiceImpl  {
     public void broadcastTransaction(metochi.Transaction request,
                                      io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
 
-        logger.info("server recieved broadcast transaction - adding to chain");
-        //BasicChain.getInstance().addTransaction(request);
+        logger.info("server received broadcast transaction - adding to chain");
+        blockChainManager.addTransaction(request);
         responseObserver.onNext(Empty.newBuilder().build());
         responseObserver.onCompleted();
     }
-
-     */
-
 }

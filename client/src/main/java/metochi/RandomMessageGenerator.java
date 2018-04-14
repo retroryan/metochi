@@ -14,7 +14,15 @@ class RandomMessageGenerator {
 
     private static Logger logger = LoggerFactory.getLogger(MetochiClient.class.getName());
 
-    public static void startGenerator(String nodeName) {
+    private final BlockChainManager blockChainManager;
+    private final PeersManager peersManager;
+
+    RandomMessageGenerator(BlockChainManager blockChainManager, PeersManager peersManager) {
+        this.blockChainManager = blockChainManager;
+        this.peersManager = peersManager;
+    }
+
+    public void startGenerator(String nodeName) {
 
         Thread randoThread = new Thread(() -> {
             try {
@@ -28,7 +36,7 @@ class RandomMessageGenerator {
 
     }
 
-    private static void sendRandomMessages(String nodeName) throws IOException, InterruptedException {
+    private void sendRandomMessages(String nodeName) throws IOException, InterruptedException {
         ArrayList<String> lines = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader("data/all-shakespeare.txt"))) {
             logger.info("learning shakespear ...");
@@ -51,15 +59,15 @@ class RandomMessageGenerator {
         }
     }
 
-    private static void sendMsg(String data, String nodeName) {
+    private void sendMsg(String data, String nodeName) {
         UUID uuid = UUID.randomUUID();
         Transaction transaction = Transaction.newBuilder()
                 .setUuid(uuid.toString())
                 .setMessage(data)
                 .setSender(nodeName).build();
 
-        //BasicChain.getInstance().addTransaction(transaction);
-        //PeersManager.getInstance().broadcastMessage(transaction);
-        
+        blockChainManager.addTransaction(transaction);
+        peersManager.broadcastMessage(transaction);
+
     }
 }

@@ -10,105 +10,132 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- *
  * This creates a basic blockchain by creating an array list of blocks of data.
- *
+ * <p>
  * It uses a basic consensus algorithm of longest chain to determine which chain from peer nodes is the valid chain.
- *
+ * <p>
  * The internal representation is a mutable array list which is not ideal.
  * It should be an immutable append only type list to ensure that it is not accidentally modified.
- *
+ * <p>
+ * The golden genesis block should be created by the lead node.
+ * This is done by checking if this is the lead node and broadcasting the genesis block.
+ * All other nodes will generate a genesis block but they will be overwritten.
+ * For the lead node, this will get the genesis block and broadcast it to other nodes.
  */
-public class BasicChain {
+public class BasicChain implements BlockChainManager {
 
     private static org.slf4j.Logger logger = LoggerFactory.getLogger(BasicChain.class.getName());
 
+    private final PeersManager peersManager;
     private List<Block> blockchain = new ArrayList<>();
-
-    private static BasicChain basicChain;
-
-    public static BasicChain getInstance() {
-        if (basicChain == null) {
-            basicChain = new BasicChain();
-        }
-        return basicChain;
-    }
-
     private final String nodeName;
+    private final String nodeURL;
+    private AtomicBoolean genesisBlockSet = new AtomicBoolean();
 
-    private BasicChain() {
-        this.nodeName = EnvVars.NODE_NAME;
-        blockchain.add(genesisBlock());
+    BasicChain(PeersManager peersManager, String nodeName, String nodeURL) {
+        this.peersManager = peersManager;
+        this.nodeName = nodeName;
+        this.nodeURL = nodeURL;
     }
 
-
-    public static Timestamp getNowTimestamp() {
-        // uses the calculation from:
-        // https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Timestamp
-
-        long millis = System.currentTimeMillis();
-        return Timestamp.newBuilder().setSeconds(millis / 1000)
-                .setNanos((int) ((millis % 1000) * 1000000)).build();
-    }
-
-    public static Block genesisBlock() {
+    @Override
+    public Block createGenesisBlock() {
 
         Transaction genesis_block = Transaction.newBuilder()
                 .setUuid(UUID.randomUUID().toString())
                 .setMessage("Genesis Block")
-                .setSender(EnvVars.NODE_NAME)
+                .setSender(nodeName)
                 .build();
 
-        return Block.newBuilder()
+        Block block = Block.newBuilder()
                 .setIndex(0)
-                .setCreator(EnvVars.NODE_NAME)
+                .setCreator(nodeName)
                 .setHash("816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7")
                 .setPreviousHash("0")
-                .setTimestamp(getNowTimestamp())
-                .setTxn(genesis_block)
+                .setTimestamp(BlockChainManager.getNowTimestamp())
+                //.setTxn(genesis_block)
                 .build();
+
+        blockchain.add(block);
+        genesisBlockSet.set(true);
+        return block;
+    }
+
+    @Override
+    public boolean genesisBlockIsSet() {
+        return genesisBlockSet.get();
     }
 
     /**
      * This adds the latest block from a peer to the blockchain.
-     *
+     * <p>
      * It first looks if the new block's previous hash is equal to the latest hash in the existing chain.
      * If not then this chain is missing more than one block, so we need to query for the entire chain.
      *
      * @param peerLatestBlock
      */
-    public void addLatestBlock(Block peerLatestBlock) {
+    @Override
+    public void addLatestBlock(Block peerLatestBlock, String sender) {
+        logger.info("add latest block");
+        //if this is the the genesis block then set this as our genesis block
+        //we should validate this block before adding it --- eventually
+        if ((!genesisBlockSet.get()) && (peerLatestBlock.getIndex() == 0)) {
+            addGenesisBlock(peerLatestBlock);
+        } else {
+            addTailBlock(peerLatestBlock, sender);
+
+        }
+    }
+
+    private void addGenesisBlock(Block peerLatestBlock) {
+        logger.info("setting genesis block");
+        blockchain.add(peerLatestBlock);
+        genesisBlockSet.set(true);
+        peersManager.broadcastBlock(peerLatestBlock, nodeURL);
+    }
+
+    /**
+     * Add a tail block (everything after the genesis block
+     *
+     * @param peerLatestBlock
+     * @param sender
+     */
+    private void addTailBlock(Block peerLatestBlock, String sender) {
         Block latestBlockHeld = getLatestBlock();
+        //if this block is farther in the chain then the latest block we have then add it to this chain
         if (peerLatestBlock.getIndex() > latestBlockHeld.getIndex()) {
             logger.info("blockchain is behind. We have latest index: "
                     + latestBlockHeld.getIndex() + " Peer has latest index: " + peerLatestBlock.getIndex());
             if (latestBlockHeld.getHash().equals(peerLatestBlock.getPreviousHash())) {
                 if (blockchain.add(peerLatestBlock)) {
                     logger.info("added peer index: " + peerLatestBlock.getIndex() + "  to latest block to chain");
-                    PeersManager.getInstance().broadcastLatestBlock(peerLatestBlock);
+                    peersManager.broadcastBlock(peerLatestBlock, nodeURL);
                 } else {
                     logger.info("unexpected error - unable to add peer latest block");
                 }
             } else {
-                //Query the given peer url for the entire blockchain
+                logger.info("replacing entire chain");
+                peersManager.queryAll(newBlocks -> replaceChain(newBlocks), sender);
             }
-        } else {
-            // we already have the block, so don't do anything
-            // logger.info("received block is already in blockchain. Do nothing");
+        } else if (!peerLatestBlock.getHash().equals(latestBlockHeld.getHash())) {
+            logger.info("peer latest block hash does not match - syncing chains");
+            peersManager.queryAll(newBlocks -> replaceChain(newBlocks), sender);
         }
     }
 
+    @Override
     public Block getLatestBlock() {
         return blockchain.get(blockchain.size() - 1);
     }
 
+    @Override
     public Blockchain getBlockchain() {
         return Blockchain.newBuilder().addAllChain(blockchain).build();
     }
-
 
     /**
      * This "mines" or generates the next block in the chain.
@@ -118,12 +145,13 @@ public class BasicChain {
      * @param data
      * @return
      */
-    Block generateNextBlock(String data) {
+    @Override
+    public Block generateNextBlock(String data) {
         logger.info("generating next block with data: " + data);
 
         Block previousBlock = getLatestBlock();
         int nextIndex = previousBlock.getIndex() + 1;
-        Timestamp now = getNowTimestamp();
+        Timestamp now = BlockChainManager.getNowTimestamp();
 
         Transaction nextTransaction = Transaction.newBuilder()
                 .setMessage(data)
@@ -139,20 +167,96 @@ public class BasicChain {
                 .setHash(nextHash)
                 .setPreviousHash(previousBlock.getHash())
                 .setTimestamp(now)
-                .setTxn(nextTransaction)
+                //.setTxn(nextTransaction)
                 .build();
 
         //logger.info("adding block to: " + blockchain);
         blockchain.add(block);
         logger.info("block added: " + block);
 
-        PeersManager.getInstance().broadcastLatestBlock(block);
+        peersManager.broadcastBlock(block, nodeURL);
         logger.info("generated next block");
         return block;
     }
 
+    /**
+     * The simplistic consensus algorithm used for determining which blockchain is the valid blockchain is simply the longest blockchain.
+     *
+     * This validates if the new blockchain is valid and is longer than the existing one.  If it is then it replaces the old blockchain.
+     *
+     * @param newBlockchain
+     * @return
+     */
+    @Override
+    public boolean replaceChain(List<Block> newBlockchain) {
+        int oldBlockChainSize = blockchain.size();
+        int newBlockChainSize = newBlockchain.size();
+        logger.info("size of new blockchain: " + newBlockChainSize + " my blockchain size: " + oldBlockChainSize);
+        if (isValidChain(newBlockchain)) {
+            if (newBlockchain.size() > oldBlockChainSize) {
+                logger.info("Received blockchain is longer. Replacing current blockchain with received blockchain");
+                //the new blocks chain is an immutable collection, so we need to copy it
+                blockchain = new ArrayList<>(newBlockchain);
+
+                /**
+                 We need to read and publich all transactions not yet seen on the new block chain
+                 An example calculation:
+
+                 old size = 3
+                 new size = 5
+                 start index = 5 - ((5-3)) => 3
+
+
+                 old size = 1
+                 new size = 2
+                 start index = 2 - ((2-1)) => 1
+
+                 */
+
+                int startReadIndex = newBlockChainSize - ((newBlockChainSize - oldBlockChainSize));
+                logger.info("dumping transactions starting at index: " + startReadIndex);
+
+
+                for (int index = startReadIndex; index < newBlockChainSize; index++) {
+                    Block nextBlock = blockchain.get(index);
+                    outputBlockTransactions(nextBlock);
+                }
+
+                return true;
+            } else {
+                logger.info("Received blockchain is not longer, not replacing.");
+                return false;
+            }
+        } else {
+            logger.info("Received blockchain invalid");
+            return false;
+        }
+    }
+
+    @Override
+    public void addTransaction(Transaction txn) {
+
+    }
+
+    private AtomicInteger saveCnt = new AtomicInteger();
+
+    @Override
+    public String saveBlockchain(String nodeName) {
+        String blockchainFileName = nodeName + saveCnt.getAndIncrement() + ".blocks";
+        try {
+            PrintWriter writer = new PrintWriter(blockchainFileName, "UTF-8");
+            for (Block block : blockchain) {
+                writer.println(block.toString());
+            }
+            writer.close();
+        } catch (IOException io) {
+            io.printStackTrace();
+        }
+        return blockchainFileName;
+    }
+
     static String calculateHashForBlock(Block block) {
-        return calculateHash(block.getIndex(), block.getPreviousHash(), block.getTimestamp(), block.getTxn());
+        return calculateHash(block.getIndex(), block.getPreviousHash(), block.getTimestamp(), null);
     }
 
     static String calculateHash(Integer index, String prevHash, Timestamp timestamp, Transaction transaction) {
@@ -206,11 +310,12 @@ public class BasicChain {
      * @param chainToValidate
      * @return
      */
-    static boolean isValidChain(List<Block> chainToValidate) {
+    boolean isValidChain(List<Block> chainToValidate) {
         for (Block nextBlock : chainToValidate) {
             if (nextBlock.getIndex() == 0) {
-                if (!nextBlock.getHash().equals(genesisBlock().getHash())) {
-                    logger.info("invalid genesis block. hash: " + nextBlock.hashCode() + " genesis block hashCode: " + genesisBlock().hashCode());
+                Block genesisBlock = blockchain.get(0);
+                if (!nextBlock.getHash().equals(genesisBlock.getHash())) {
+                    logger.info("invalid genesis block. hash: " + nextBlock.hashCode() + " genesis block hashCode: " + genesisBlock.hashCode());
                     return false;
                 }
             } else if (!isValidNewBlock(nextBlock, chainToValidate.get(nextBlock.getIndex() - 1))) {
@@ -222,82 +327,9 @@ public class BasicChain {
         return true;
     }
 
-    /**
-     * The simplistic consensus algorithm used for determining which blockchain is the valid blockchain is simply the longest blockchain.
-     * <p>
-     * This validates if the new blockchain is valid and is longer than the existing one.  If it is then it replaces the old blockchain.
-     *
-     * @param newBlocks
-     * @return
-     */
-    public boolean replaceChain(List<Block> newBlocks) {
-        int oldBlockChainSize = blockchain.size();
-        int newBlockChainSize = newBlocks.size();
-        logger.info("size of new blockchain: " + newBlockChainSize + " my blockchain size: " + oldBlockChainSize);
-        if (isValidChain(newBlocks)) {
-            if (newBlocks.size() > oldBlockChainSize) {
-                logger.info("Received blockchain is longer. Replacing current blockchain with received blockchain");
-                //the new blocks chain is an immutable collection, so we need to copy it
-                blockchain = new ArrayList<>(newBlocks);
-
-                /**
-                 We need to read and publich all transactions not yet seen on the new block chain
-                 An example calculation:
-
-                 old size = 3
-                 new size = 5
-                 start index = 5 - ((5-3)) => 3
-
-
-                 old size = 1
-                 new size = 2
-                 start index = 2 - ((2-1)) => 1
-
-                 */
-
-                int startReadIndex = newBlockChainSize - ((newBlockChainSize - oldBlockChainSize));
-                logger.info("dumping transactions starting at index: " + startReadIndex);
-
-
-                for (int index = startReadIndex; index < newBlockChainSize; index++) {
-                    Block nextBlock = blockchain.get(index);
-                    outputBlockTransactions(nextBlock);
-                }
-
-                return true;
-            } else {
-                logger.info("Received blockchain is not longer, not replacing.");
-                return false;
-            }
-        } else {
-            logger.info("Received blockchain invalid");
-            return false;
-        }
-    }
 
     private void outputBlockTransactions(Block nextBlock) {
         System.out.println("New Messages from block: " + nextBlock.getIndex());
-/*
-        nextBlock.getTxnList().forEach(transaction -> {
-            if (!transaction.getSender().equals(nodeName))
-                System.out.println(transaction);
-        });
-*/
-    }
-
-    private AtomicInteger saveCnt = new AtomicInteger();
-
-    public String saveBlockchain(String nodeName) {
-        String blockchainFileName = nodeName + saveCnt.getAndIncrement() + ".blocks";
-        try {
-            PrintWriter writer = new PrintWriter(blockchainFileName, "UTF-8");
-            for (Block block : blockchain) {
-                writer.println(block.toString());
-            }
-            writer.close();
-        } catch (IOException io) {
-            io.printStackTrace();
-        }
-        return blockchainFileName;
+        //System.out.println(nextBlock.getTxn());
     }
 }

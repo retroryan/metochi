@@ -15,17 +15,21 @@ public class Config {
     private static Logger logger = LoggerFactory.getLogger(MetochiClient.class.getName());
 
     int port;
+    String hostname;
     ArrayList<String> peerUrls;
     int startDelay;
-    boolean isAuthorityNode = true;
-    boolean enableRandomMessage = true;
+    boolean isAuthorityNode = false;
+    boolean enableRandomMessage = false;
+    boolean leadNode = false;
 
-    public Config(int port, ArrayList<String> peerUrls, int startDelay, boolean isAuthorityNode, boolean enableRandomMessage) {
+    public Config(int port, String hostname, ArrayList<String> peerUrls, int startDelay, boolean authorityNode, boolean enableRandomMessage, boolean leadNode) {
         this.port = port;
+        this.hostname = hostname;
         this.peerUrls = peerUrls;
         this.startDelay = startDelay;
-        this.isAuthorityNode = isAuthorityNode;
+        this.isAuthorityNode = authorityNode;
         this.enableRandomMessage = enableRandomMessage;
+        this.leadNode = leadNode;
     }
 
     @Override
@@ -53,15 +57,17 @@ public class Config {
 
             //load the individual properties for configuration
             int port = Integer.parseInt(prop.getProperty("port"));
+            String hostname = prop.getProperty("hostname");
             String peers = prop.getProperty("peers");
             String[] splitLine = peers.split(",");
             ArrayList<String> peersList = new ArrayList<>(Arrays.asList(splitLine));
             int startDelay = Integer.parseInt(prop.getProperty("startDelay"));
             boolean isAuthorityNode = Boolean.parseBoolean(prop.getProperty("isAuthorityNode"));
             boolean enableRandomMessage = Boolean.parseBoolean(prop.getProperty("enableRandomMessage"));
+            boolean leadNode = Boolean.parseBoolean(prop.getProperty("isLeadNode"));
 
             //return the full configuration object
-            return new Config(port, peersList, startDelay, isAuthorityNode, enableRandomMessage);
+            return new Config(port, hostname, peersList, startDelay, isAuthorityNode, enableRandomMessage, leadNode);
 
         } catch (IOException ex) {
             ex.printStackTrace();

@@ -70,13 +70,12 @@ public class MetochiClient {
 
 
         Optional<AuthorityNode> optionalAuthorityNode = Optional.empty();
-        
-/*      if (config.isAuthorityNode) {
+        if (config.isAuthorityNode) {
             AuthorityNode authorityNode = new AuthorityNode(nodeName, blockChainManager, peersManager);
             authorityNode.start();
             optionalAuthorityNode = Optional.of(authorityNode);
         }
-*/
+
         client.initServer(blockChainManager, optionalAuthorityNode);
 
         // TODO - uncomment init peers to connect this node to other nodes in the network
@@ -101,10 +100,10 @@ public class MetochiClient {
      */
     private static BlockChainManager initBlockchainManager(String nodeName, Config config, PeersManager peersManager, String nodeURL) {
 
-        BlockChainManager blockChainManager = new BasicChain(peersManager, nodeName, nodeURL);
+        //BlockChainManager blockChainManager = new BasicChain(peersManager, nodeName, nodeURL);
 
         // TODO POA - switch to using the ProofOfAuthorityChain
-        // BlockChainManager blockChainManager = new ProofOfAuthorityChain(peersManager, nodeName, nodeURL);
+        BlockChainManager blockChainManager = new ProofOfAuthorityChain(peersManager, nodeName, nodeURL);
 
         if (config.leadNode) {
             logger.info("lead node - creating genesis");
@@ -191,7 +190,7 @@ public class MetochiClient {
             //in the first phase just send this message locally
             //later during Proof of Authority change this to broadcast the message
             // TODO POA - switch to using broadcastMsg
-            sendMsg(line);
+            broadcastMsg(line);
         }
     }
 

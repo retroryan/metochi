@@ -39,7 +39,7 @@ message Block {
     string hash = 20;
     string previousHash = 30;
     google.protobuf.Timestamp timestamp = 40;
-    Transaction txn = 50;
+    repeated Transaction txn = 50;
 }
 
 message Blockchain {

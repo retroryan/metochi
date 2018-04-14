@@ -60,7 +60,7 @@ public class ProofOfAuthorityChain implements BlockChainManager {
                 .setHash("816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7")
                 .setPreviousHash("0")
                 .setTimestamp(BlockChainManager.getNowTimestamp())
-                //.addTxn(genesis_block)
+                .addTxn(genesis_block)
                 .build();
 
         blockchain.add(block);
@@ -119,12 +119,10 @@ public class ProofOfAuthorityChain implements BlockChainManager {
                     peersManager.broadcastBlock(peerLatestBlock, nodeURL);
 
                     //TODO POA - Print out new transactions where added by this block
-                /**
                     if (peerLatestBlock.getTxnList().size() > 0) {
                         removeExistingTransactions(peerLatestBlock);
                         outputBlockTransactions(peerLatestBlock);
                     }
-                **/
 
                 } else {
                     logger.info("unexpected error - unable to add peer latest block");
@@ -176,7 +174,7 @@ public class ProofOfAuthorityChain implements BlockChainManager {
                 .setHash(nextHash)
                 .setPreviousHash(previousBlock.getHash())
                 .setTimestamp(now)
-                //.addAllTxn(latestTransactions)
+                .addAllTxn(latestTransactions)
                 .build();
 
         blockchain.add(block);
@@ -273,8 +271,7 @@ public class ProofOfAuthorityChain implements BlockChainManager {
 
     static String calculateHashForBlock(Block block) {
         // TODO POA - Calculate the hash for the block
-        // return calculateHash(block.getIndex(), block.getPreviousHash(), block.getTimestamp(), block.getTxnList());
-        return "";
+        return calculateHash(block.getIndex(), block.getPreviousHash(), block.getTimestamp(), block.getTxnList());
     }
 
     static String calculateHash(Integer index, String prevHash, Timestamp timestamp, Collection<Transaction> txnList) {
@@ -352,22 +349,18 @@ public class ProofOfAuthorityChain implements BlockChainManager {
 
         //TODO POA - Output the transactions from the given block
         //for simplicity just do a system println, which will show up in the command window
-        /**
         nextBlock.getTxnList().forEach(transaction -> {
             if (!transaction.getSender().equals(nodeName))
                 System.out.println(transaction);
         });
-        **/
     }
 
     private void removeExistingTransactions(Block peerLatestBlock) {
         //TODO POA - Remove existing transactions from the given block.  That is transactions we already have seen.
-        /**
         logger.info("removing transactions received in latest block ");
         peerLatestBlock.getTxnList().forEach(transaction -> {
             transactions.remove(UUID.fromString(transaction.getUuid()));
         });
-        **/
     }
 
 

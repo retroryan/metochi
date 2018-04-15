@@ -84,11 +84,10 @@ public class MetochiClient {
 
 
         Optional<AuthorityNode> optionalAuthorityNode = Optional.empty();
-        //if (config.isAuthorityNode) {
-        AuthorityNode authorityNode = new AuthorityNode(nodeName, blockChainManager, peersManager);
-        authorityNode.start();
 
         if (config.isAuthorityNode) {
+            AuthorityNode authorityNode = new AuthorityNode(nodeName, blockChainManager, peersManager);
+            authorityNode.start();
             optionalAuthorityNode = Optional.of(authorityNode);
         }
 

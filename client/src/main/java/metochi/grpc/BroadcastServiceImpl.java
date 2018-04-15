@@ -1,7 +1,13 @@
 package metochi.grpc;
 
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.protobuf.Empty;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import metochi.*;
+import metochi.jwt.Constant;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
@@ -23,7 +29,6 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
     //TODO - Override the broadcast, queryLatest and queryAll methods here
 
     /**
-     *
      * This handles a call to broadcast a block to this node.  When the call is received this node add the block to it's blockchain.
      *
      * @param request
@@ -39,7 +44,6 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
     }
 
     /**
-     *
      * This handles a call to query the latest block from this node and sends it back to the node that made the query.
      *
      * @param request
@@ -59,7 +63,6 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
 
 
     /**
-     *
      * This handles a call to query the entire blockchain from this node and sends it back to the node that made the query.
      *
      * @param request
@@ -78,9 +81,31 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
     }
 
     //These methods are used when creating a Proof of Authority blockchain
+
+    protected <T> boolean failBecauseNotAuthorityNode(StreamObserver<T> responseObserver) {
+        // TODO Retrieve JWT from Constant.JWT_CTX_KEY
+        DecodedJWT jwt = Constant.JWT_CTX_KEY.get();
+        Claim claim = jwt.getClaim(Constant.IS_AUTHORITY);
+        logger.info("failBecauseNotAuthorityNode claim: " + claim);
+        if ((!claim.isNull()) && (claim.asBoolean())) {
+            logger.error("failing call because not authority node");
+            StatusRuntimeException isNotAnAuthorityNode
+                    = new StatusRuntimeException(Status.PERMISSION_DENIED.withDescription("Not an authority node!"));
+            responseObserver.onError(isNotAnAuthorityNode);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
     //@Override
     public void propose(metochi.ProposeRequest request,
                         io.grpc.stub.StreamObserver<metochi.ProposeResponse> responseObserver) {
+
+        if (failBecauseNotAuthorityNode(responseObserver)) {
+            return;
+        }
 
         boolean accepted = false;
 
@@ -90,8 +115,7 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
             if (!pendingVote) {
                 accepted = true;
             }
-        }
-        else {
+        } else {
             //this is not a proper response - each authority node should connect to a quorum of authority nodes
             //and only authority nodes should be allowed to vote.
             //however to simplify things we just return true to make it easy for a vote proposal to be accepted.

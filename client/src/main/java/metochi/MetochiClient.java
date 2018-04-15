@@ -16,14 +16,19 @@
 
 package metochi;
 
+import com.auth0.jwt.algorithms.Algorithm;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 import jline.console.ConsoleReader;
 import metochi.grpc.BroadcastServiceImpl;
 
 import java.io.*;
 import java.util.*;
 
+import metochi.jwt.Constant;
+import metochi.jwt.JwtAuthService;
+import metochi.jwt.JwtServerInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +49,8 @@ public class MetochiClient {
     private final BlockChainManager blockChainManager;
     private final PeersManager peersManager;
 
+    private String jwtToken;
+
     public MetochiClient(BlockChainManager blockChainManager, String nodeName, String nodeURL, Config config, PeersManager peersManager) throws IOException {
         this.blockChainManager = blockChainManager;
         this.nodeName = nodeName;
@@ -58,8 +65,14 @@ public class MetochiClient {
         Config config = Config.loadProperties(nodeName);
         logger.info("starting with config: " + config);
 
+        //This is the JWT token for this node.  What should happen is this node would go through an authentication
+        //process at startup to determine if it is really an authority node and assign a JWT claim based on that
+        //For simplicity we fake it by setting it in a config file.
+        String token = JwtAuthService.instance().authenticate(nodeName, config.isAuthorityNode);
+        logger.info("jwt token:" + token);
+
         //This manages the list of peer nodes that this node connects to
-        PeersManager peersManager = new PeersManager();
+        PeersManager peersManager = new PeersManager(token);
 
         String nodeURL = config.hostname + ":" + config.port;
         logger.info("metochi node is starting on url: " + nodeURL);
@@ -70,9 +83,11 @@ public class MetochiClient {
 
 
         Optional<AuthorityNode> optionalAuthorityNode = Optional.empty();
+        //if (config.isAuthorityNode) {
+        AuthorityNode authorityNode = new AuthorityNode(nodeName, blockChainManager, peersManager);
+        authorityNode.start();
+
         if (config.isAuthorityNode) {
-            AuthorityNode authorityNode = new AuthorityNode(nodeName, blockChainManager, peersManager);
-            authorityNode.start();
             optionalAuthorityNode = Optional.of(authorityNode);
         }
 
@@ -89,8 +104,8 @@ public class MetochiClient {
     }
 
     /**
-     *  The Blockchain Manager used will start as a basic chain for the first part of the exercises.
-     *  When the exercises change to use Proof of Authority this needs to be changed to use ProofOfAuthorityChain
+     * The Blockchain Manager used will start as a basic chain for the first part of the exercises.
+     * When the exercises change to use Proof of Authority this needs to be changed to use ProofOfAuthorityChain
      *
      * @param nodeName
      * @param config
@@ -122,8 +137,11 @@ public class MetochiClient {
         // TODO Use ServerBuilder to create a new Server instance. Start it, and await termination.
 
         BroadcastServiceImpl broadcastService = new BroadcastServiceImpl(blockChainManager, optionalAuthorityNode);
+        final JwtServerInterceptor jwtServerInterceptor = new JwtServerInterceptor(Constant.ISSUER, Algorithm.HMAC256("secret"));
+
         final Server server = ServerBuilder.forPort(config.port)
-                .addService(broadcastService)
+                .addService(ServerInterceptors
+                        .intercept(broadcastService, jwtServerInterceptor))
                 .build();
 
         Runtime.getRuntime().addShutdownHook(new Thread() {

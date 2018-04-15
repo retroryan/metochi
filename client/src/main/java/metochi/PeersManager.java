@@ -19,6 +19,12 @@ public class PeersManager {
 
     private ArrayList<BroadcastPeer> broadcastPeers = new ArrayList<>();
 
+    private final String token;
+
+    public PeersManager(String token) {
+        this.token = token;
+    }
+
     void queryAll(Consumer<List<Block>> chainConsumer, String nodeURL) {
         logger.info("Querying the chain from peer: " + nodeURL);
         for (BroadcastPeer peer : broadcastPeers) {
@@ -30,11 +36,10 @@ public class PeersManager {
         }
     }
 
-    BroadcastPeer addBroadcastPeer(String peerURL) {
-        BroadcastPeer newPeer = new BroadcastPeer(peerURL);
+    void addBroadcastPeer(String peerURL) {
+        BroadcastPeer newPeer = new BroadcastPeer(peerURL, token);
         broadcastPeers.add(newPeer);
         logger.info("added peer: " + peerURL);
-        return newPeer;
     }
 
     void broadcastBlock(Block latestBlock, String senderURL) {

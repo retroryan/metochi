@@ -3,6 +3,10 @@ package metochi;
 import com.google.protobuf.Empty;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.stub.MetadataUtils;
+import metochi.jwt.Constant;
+import metochi.jwt.JwtClientInterceptor;
 import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
@@ -19,11 +23,11 @@ public class BroadcastPeer {
 
     private BroadcastServiceGrpc.BroadcastServiceBlockingStub broadcastService;
 
-    BroadcastPeer(String peerURL) {
+    BroadcastPeer(String peerURL, String jwtToken) {
         this.peerURL = peerURL;
         try {
             logger.info("setting peer connection to: " + peerURL);
-            initBroadcastService(peerURL);
+            initBroadcastService(peerURL, jwtToken);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -33,14 +37,21 @@ public class BroadcastPeer {
      * Initialize a managed channel to connect to the broadcast service.
      * Set the broadcastChannel and broadcastService
      */
-    void initBroadcastService(String peerURL) {
+    void initBroadcastService(String peerURL, String jwtToken) {
 
         //TODO Initialize the Broadcast Channel and Broadcast Service here
-        ManagedChannel broadcastChannel = ManagedChannelBuilder.forTarget(peerURL)
+        ManagedChannel broadcastChannel = ManagedChannelBuilder
+                .forTarget(peerURL)
+                .intercept(new JwtClientInterceptor())
                 .usePlaintext(true).build();
 
         //TODO Get a new Blocking Stub
-        broadcastService = BroadcastServiceGrpc.newBlockingStub(broadcastChannel);
+
+        Metadata metadata = new Metadata();
+        metadata.put(Constant.JWT_METADATA_KEY, jwtToken);
+
+        broadcastService = MetadataUtils.attachHeaders(
+                BroadcastServiceGrpc.newBlockingStub(broadcastChannel), metadata);
 
     }
 

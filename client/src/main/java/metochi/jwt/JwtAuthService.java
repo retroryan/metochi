@@ -64,10 +64,11 @@ public class JwtAuthService {
 
     }
 
-    protected String generateToken(String username, boolean isAuthorityNode) {
+    protected String generateToken(String nodeName, boolean isAuthorityNode) {
+        //TODO generate jwt token with a claim for being an authority node or not
         return JWT.create()
                 .withIssuer(Constant.ISSUER)
-                .withSubject(username)
+                .withSubject(nodeName)
                 .withClaim(IS_AUTHORITY, isAuthorityNode)
                 .sign(algorithm);
     }

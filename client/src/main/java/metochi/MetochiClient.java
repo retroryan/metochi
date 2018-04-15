@@ -71,6 +71,7 @@ public class MetochiClient {
         String token = JwtAuthService.instance().authenticate(nodeName, config.isAuthorityNode);
         logger.info("jwt token:" + token);
 
+        //TODO Create and pass a JWT to Peers Manager
         //This manages the list of peer nodes that this node connects to
         PeersManager peersManager = new PeersManager(token);
 
@@ -135,6 +136,7 @@ public class MetochiClient {
     private void initServer(BlockChainManager blockChainManager, Optional<AuthorityNode> optionalAuthorityNode) throws IOException {
 
         // TODO Use ServerBuilder to create a new Server instance. Start it, and await termination.
+        // TODO Add JWT Server Interceptor, then later, trace interceptor
 
         BroadcastServiceImpl broadcastService = new BroadcastServiceImpl(blockChainManager, optionalAuthorityNode);
         final JwtServerInterceptor jwtServerInterceptor = new JwtServerInterceptor(Constant.ISSUER, Algorithm.HMAC256("secret"));

@@ -58,8 +58,10 @@ public class MetochiClient {
         Config config = Config.loadProperties(nodeName);
         logger.info("starting with config: " + config);
 
+        //TODO Create and pass a JWT to Peers Manager
+
         //This manages the list of peer nodes that this node connects to
-        PeersManager peersManager = new PeersManager();
+        PeersManager peersManager = new PeersManager("");
 
         String nodeURL = config.hostname + ":" + config.port;
         logger.info("metochi node is starting on url: " + nodeURL);
@@ -90,8 +92,8 @@ public class MetochiClient {
     }
 
     /**
-     *  The Blockchain Manager used will start as a basic chain for the first part of the exercises.
-     *  When the exercises change to use Proof of Authority this needs to be changed to use ProofOfAuthorityChain
+     * The Blockchain Manager used will start as a basic chain for the first part of the exercises.
+     * When the exercises change to use Proof of Authority this needs to be changed to use ProofOfAuthorityChain
      *
      * @param nodeName
      * @param config

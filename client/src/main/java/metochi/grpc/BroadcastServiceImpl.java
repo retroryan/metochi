@@ -1,7 +1,13 @@
 package metochi.grpc;
 
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.protobuf.Empty;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import metochi.*;
+import metochi.jwt.Constant;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
@@ -78,6 +84,23 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
     }
 
     //These methods are used when creating a Proof of Authority blockchain
+
+    protected <T> boolean failBecauseNotAuthorityNode(StreamObserver<T> responseObserver) {
+        // TODO Retrieve JWT from Constant.JWT_CTX_KEY
+        DecodedJWT jwt = Constant.JWT_CTX_KEY.get();
+        Claim claim = jwt.getClaim(Constant.IS_AUTHORITY);
+        logger.info("failBecauseNotAuthorityNode claim: " + claim);
+        if ((!claim.isNull()) && (claim.asBoolean())) {
+            logger.error("failing call because not authority node");
+            StatusRuntimeException isNotAnAuthorityNode
+                    = new StatusRuntimeException(Status.PERMISSION_DENIED.withDescription("Not an authority node!"));
+            responseObserver.onError(isNotAnAuthorityNode);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     //@Override
     public void propose(metochi.ProposeRequest request,
                         io.grpc.stub.StreamObserver<metochi.ProposeResponse> responseObserver) {

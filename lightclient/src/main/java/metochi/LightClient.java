@@ -57,8 +57,9 @@ public class LightClient {
     }
 
     public void initBlockStreamService() {
-        logger.info("init block stream");
-        ManagedChannel blockStreamChannel = ManagedChannelBuilder.forTarget("localhost:9002")
+        String targetServer = "localhost:9092";
+        logger.info("init block stream: " + targetServer);
+        ManagedChannel blockStreamChannel = ManagedChannelBuilder.forTarget(targetServer)
                 .usePlaintext(true)
                 .build();
 
@@ -77,10 +78,12 @@ public class LightClient {
             @Override
             public void onError(Throwable throwable) {
 
+                logger.error(throwable.getMessage());
             }
 
             @Override
             public void onCompleted() {
+                logger.info("completed");
 
             }
         });

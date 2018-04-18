@@ -145,6 +145,7 @@ public class MetochiClient {
         final JwtServerInterceptor jwtServerInterceptor = new JwtServerInterceptor(Constant.ISSUER, Algorithm.HMAC256("secret"));
 
         final Server server = ServerBuilder.forPort(config.port)
+                .addService(blockStreamService)
                 .addService(ServerInterceptors
                         .intercept(broadcastService, jwtServerInterceptor))
                 .build();

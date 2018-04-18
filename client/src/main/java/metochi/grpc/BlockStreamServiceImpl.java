@@ -29,7 +29,7 @@ public class BlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamSe
         this.blockChainManager = blockChainManager;
     }
 
-    public void streamBlock(Block block) {
+    public void internalStreamBlock(Block block) {
         blockObservers.forEach(emptyStreamObserver -> {
             emptyStreamObserver.onNext(block);
         });
@@ -38,7 +38,7 @@ public class BlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamSe
 
     @Override
     public StreamObserver<NewMessage> streamBlock(StreamObserver<Block> responseObserver) {
-        final String username = Constant.USER_ID_CTX_KEY.get();
+        logger.info("setup stream block called - creating stream observer");
 
         return new StreamObserver<NewMessage>() {
             @Override

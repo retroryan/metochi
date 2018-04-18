@@ -44,6 +44,21 @@ public class JwtServerInterceptor implements ServerInterceptor {
   @Override
   public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> serverCall, Metadata metadata, ServerCallHandler<ReqT, RespT> serverCallHandler) {
 
+    //TODO - Capture Metadata from Server Interceptor
+
+    // TODO Get token from Metadata
+    String token = metadata.get(Constant.JWT_METADATA_KEY);
+    System.out.println("Token: " + token);
+
+    return serverCallHandler.startCall(serverCall, metadata);
+
+
+
+    /**
+
+     // TODO Server Interceptor - Metadata to Context
+     // TODO If token is nul, or is invalid,
+
     String token = metadata.get(Constant.JWT_METADATA_KEY);
     if (token == null) {
       serverCall.close(Status.UNAUTHENTICATED.withDescription("JWT Token is missing from Metadata"), metadata);
@@ -62,6 +77,6 @@ public class JwtServerInterceptor implements ServerInterceptor {
       serverCall.close(Status.UNAUTHENTICATED.withDescription(e.getMessage()).withCause(e), metadata);
       return NOOP_LISTENER;
     }
-
+     /**
   }
 }

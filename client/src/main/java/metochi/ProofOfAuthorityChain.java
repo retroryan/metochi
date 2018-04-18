@@ -358,8 +358,8 @@ public class ProofOfAuthorityChain implements BlockChainManager {
     private void removeExistingTransactions(Block peerLatestBlock) {
         //TODO POA - Remove existing transactions from the given block.  That is transactions we already have seen.
         logger.info("removing transactions received in latest block ");
-        peerLatestBlock.getTxnList().forEach(transaction -> {
-            transactions.remove(UUID.fromString(transaction.getUuid()));
+        peerLatestBlock.getTxnList().forEach(nxtPeerTxn -> {
+            transactions.remove(UUID.fromString(nxtPeerTxn.getUuid()));
         });
     }
 

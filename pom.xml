@@ -34,7 +34,8 @@
         <docker.image.prefix>retroryan</docker.image.prefix>
     </properties>
     <modules>
-        <module>client</module>
+      <module>client</module>
+      <module>lightclient</module>
     </modules>
 
     <dependencyManagement>

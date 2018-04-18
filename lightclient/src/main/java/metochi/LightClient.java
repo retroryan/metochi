@@ -58,7 +58,7 @@ public class LightClient {
 
     public void initBlockStreamService() {
         logger.info("init block stream");
-        ManagedChannel blockStreamChannel = ManagedChannelBuilder.forTarget("chat-service:9002")
+        ManagedChannel blockStreamChannel = ManagedChannelBuilder.forTarget("localhost:9002")
                 .usePlaintext(true)
                 .build();
 

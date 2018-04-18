@@ -39,7 +39,6 @@ public class ProofOfAuthorityChain implements BlockChainManager {
     //  authority node voting process.
     private Map<UUID, Transaction> transactions = new HashMap<>();
 
-
     ProofOfAuthorityChain(PeersManager peersManager, String nodeName, String nodeURL) {
         this.peersManager = peersManager;
         this.nodeName = nodeName;
@@ -362,6 +361,10 @@ public class ProofOfAuthorityChain implements BlockChainManager {
             transactions.remove(UUID.fromString(nxtPeerTxn.getUuid()));
         });
     }
+
+
+
+
 
 
 }

@@ -74,3 +74,21 @@ service BroadcastService {
   rpc broadcastTransaction(Transaction) returns (google.protobuf.Empty);
   rpc propose(ProposeRequest) returns (ProposeResponse);
 }
+
+
+//4. Streaming
+
+enum MessageType {
+    JOIN = 0;
+    LEAVE = 1;
+    MESSAGE = 2;
+}
+
+message NewMessage {
+    MessageType type = 1;
+    string message = 11;
+}
+
+service BlockStreamService {
+    rpc streamBlock(stream NewMessage) returns (stream Block);
+}

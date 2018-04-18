@@ -21,9 +21,12 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
 
     private final BlockChainManager blockChainManager;
 
-    public BroadcastServiceImpl(BlockChainManager manager, Optional<AuthorityNode> optAuthorityNode) {
+    private final BlockStreamServiceImpl blockStreamService;
+
+    public BroadcastServiceImpl(BlockChainManager manager, Optional<AuthorityNode> optAuthorityNode, BlockStreamServiceImpl blockStreamService) {
         this.blockChainManager = manager;
         this.optAuthorityNode = optAuthorityNode;
+        this.blockStreamService = blockStreamService;
     }
 
     //TODO - Override the broadcast, queryLatest and queryAll methods here
@@ -39,6 +42,10 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
                           io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
         logger.info("server broadcast received block index: " + request.getBlock().getIndex());
         blockChainManager.addLatestBlock(request.getBlock(), request.getSender());
+
+        //Broadcast this block to the stream of lightweight clients
+        blockStreamService.streamBlock(request.getBlock());
+
         responseObserver.onNext(Empty.newBuilder().build());
         responseObserver.onCompleted();
     }

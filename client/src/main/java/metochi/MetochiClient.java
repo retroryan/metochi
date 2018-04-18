@@ -21,6 +21,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
 import jline.console.ConsoleReader;
+import metochi.grpc.BlockStreamServiceImpl;
 import metochi.grpc.BroadcastServiceImpl;
 
 import java.io.*;
@@ -91,7 +92,7 @@ public class MetochiClient {
             optionalAuthorityNode = Optional.of(authorityNode);
         }
 
-        client.initServer(blockChainManager, optionalAuthorityNode);
+        client.initServer(blockChainManager, optionalAuthorityNode, peersManager);
 
         // TODO - uncomment init peers to connect this node to other nodes in the network
         client.initPeers(config.leadNode);
@@ -132,12 +133,14 @@ public class MetochiClient {
      *
      * @throws IOException
      */
-    private void initServer(BlockChainManager blockChainManager, Optional<AuthorityNode> optionalAuthorityNode) throws IOException {
+    private void initServer(BlockChainManager blockChainManager, Optional<AuthorityNode> optionalAuthorityNode, PeersManager peersManager) throws IOException {
 
         // TODO Use ServerBuilder to create a new Server instance. Start it, and await termination.
         // TODO Add JWT Server Interceptor, then later, trace interceptor
 
-        BroadcastServiceImpl broadcastService = new BroadcastServiceImpl(blockChainManager, optionalAuthorityNode);
+        final BlockStreamServiceImpl blockStreamService = new BlockStreamServiceImpl(peersManager, blockChainManager);
+
+        BroadcastServiceImpl broadcastService = new BroadcastServiceImpl(blockChainManager, optionalAuthorityNode, blockStreamService);
         final JwtServerInterceptor jwtServerInterceptor = new JwtServerInterceptor(Constant.ISSUER, Algorithm.HMAC256("secret"));
 
         final Server server = ServerBuilder.forPort(config.port)

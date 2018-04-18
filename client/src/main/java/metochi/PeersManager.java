@@ -55,7 +55,7 @@ public class PeersManager {
         }
     }
 
-    void broadcastMessage(Transaction transaction) {
+    public void broadcastMessage(Transaction transaction) {
         for (BroadcastPeer peer : broadcastPeers) {
             logger.info("sending message to:" + peer.getPeerURL());
             peer.broadcastTransaction(transaction);

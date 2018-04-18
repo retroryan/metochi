@@ -77,6 +77,6 @@ public class JwtServerInterceptor implements ServerInterceptor {
       serverCall.close(Status.UNAUTHENTICATED.withDescription(e.getMessage()).withCause(e), metadata);
       return NOOP_LISTENER;
     }
-     /**
+     **/
   }
 }

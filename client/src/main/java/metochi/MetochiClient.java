@@ -70,6 +70,7 @@ public class MetochiClient {
         //process at startup to determine if it is really an authority node and assign a JWT claim based on that
         //For simplicity we fake it by setting it in a config file.
         String token = JwtAuthService.instance().authenticate(nodeName, config.isAuthorityNode);
+        logger.info("config.isAuthorityNode:" + config.isAuthorityNode);
         logger.info("jwt token:" + token);
 
         //TODO Create and pass a JWT to Peers Manager

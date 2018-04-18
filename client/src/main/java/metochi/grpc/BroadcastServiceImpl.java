@@ -110,9 +110,9 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
     public void propose(metochi.ProposeRequest request,
                         io.grpc.stub.StreamObserver<metochi.ProposeResponse> responseObserver) {
 
-        if (failBecauseNotAuthorityNode(responseObserver)) {
+       /* if (failBecauseNotAuthorityNode(responseObserver)) {
             return;
-        }
+        }*/
 
         boolean accepted = false;
 

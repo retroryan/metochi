@@ -90,7 +90,7 @@ public class BroadcastServiceImpl extends BroadcastServiceGrpc.BroadcastServiceI
         DecodedJWT jwt = Constant.JWT_CTX_KEY.get();
         Claim claim = jwt.getClaim(Constant.IS_AUTHORITY);
         logger.info("failBecauseNotAuthorityNode claim: " + claim);
-        if ((!claim.isNull()) && (claim.asBoolean())) {
+        if ((!claim.isNull()) && (!claim.asBoolean())) {
             logger.error("failing call because not authority node");
             StatusRuntimeException isNotAnAuthorityNode
                     = new StatusRuntimeException(Status.PERMISSION_DENIED.withDescription("Not an authority node!"));

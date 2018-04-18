@@ -66,6 +66,7 @@ public class JwtAuthService {
 
     protected String generateToken(String nodeName, boolean isAuthorityNode) {
         //TODO generate jwt token with a claim for being an authority node or not
+        logger.info("creating jwt with subject: " + nodeName + " is authority: " + isAuthorityNode);
         return JWT.create()
                 .withIssuer(Constant.ISSUER)
                 .withSubject(nodeName)
